@@ -4,10 +4,12 @@ To Build & Run
   curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
   2. Build WASM module:
-  cd /home/me/Desktop/VisualAlgebra/web
+  cd web
   npm install
   npm run wasm
 
   3. Start dev server:
   npm run dev
+
+  4. Open http://localhost:3000
 

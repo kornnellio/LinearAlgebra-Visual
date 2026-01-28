@@ -1,5 +1,7 @@
 # VisualAlgebra - Detailed Code Flow
 
+> **Note**: Line number references are approximate and may drift as code evolves. Use function/class names to locate code.
+
 ## Table of Contents
 1. [Project Overview](#project-overview)
 2. [Directory Structure](#directory-structure)
