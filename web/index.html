@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visual Algebra</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="controls">
+      <!-- Matrix input - shared -->
+      <section class="matrix-section">
+        <div class="matrix-label">Matrix A</div>
+        <div class="matrix-grid" id="matrix-input">
+          <!-- Filled by JS -->
+        </div>
+        <div class="determinant" id="determinant">D: 1.000</div>
+      </section>
+
+      <!-- Presets - only for matrices and eigenvalues modules -->
+      <section class="presets-section" data-module="matrices-as-maps">
+        <div class="preset-grid">
+          <button class="preset-btn" data-preset="identity">I</button>
+          <button class="preset-btn" data-preset="rotateX">Rx</button>
+          <button class="preset-btn" data-preset="rotateY">Ry</button>
+          <button class="preset-btn" data-preset="rotateZ">Rz</button>
+          <button class="preset-btn" data-preset="scale">2×</button>
+          <button class="preset-btn" data-preset="shear">Sh</button>
+          <button class="preset-btn" data-preset="reflect">Rf</button>
+          <button class="preset-btn" data-preset="project">Pj</button>
+        </div>
+      </section>
+
+      <!-- EIGENVALUES MODULE: Reset button -->
+      <section class="reset-section" data-module="eigenvalues">
+        <button id="reset-eigen-btn" class="reset-btn-full">Reset to Identity</button>
+      </section>
+
+      <!-- MATRICES MODULE: Reset button -->
+      <section class="reset-section" data-module="matrices-as-maps">
+        <button id="reset-transform-btn" class="reset-btn-full">Reset to Identity</button>
+      </section>
+
+       <!-- MATRICES MODULE: Vector transform v → Av -->
+      <section class="vectors-section" data-module="matrices-as-maps">
+        <div class="vector-box input-vector">
+          <input type="number" id="vec-x" step="0.1" value="1">
+          <input type="number" id="vec-y" step="0.1" value="0.5">
+          <input type="number" id="vec-z" step="0.1" value="0.5">
+        </div>
+        <div class="transform-label">v → Av</div>
+        <div class="vector-box result-vector">
+          <span id="res-x">1.00</span>
+          <span id="res-y">0.50</span>
+          <span id="res-z">0.50</span>
+        </div>
+      </section>
+
+      <!-- MATRICES MODULE: Display toggles -->
+      <section class="display-section" data-module="matrices-as-maps">
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-grid">
+          <span>Grid</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-sphere" checked>
+          <span>Sphere</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-basis" checked>
+          <span>Basis</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-vector" checked>
+          <span>Vector</span>
+        </label>
+      </section>
+
+      <!-- EIGENVALUES MODULE: Eigenvalue info -->
+      <section class="eigen-info-section" data-module="eigenvalues">
+        <div class="invariants-panel-large">
+          <div class="invariant-row-large">
+            <span class="invariant-label-large">Rank</span>
+            <span class="invariant-value-large" id="rank-value">3</span>
+          </div>
+          <div class="invariant-row-large eigenvalues-highlight">
+            <span class="invariant-label-large">λ</span>
+            <span class="invariant-value-large" id="eigenvalues-value">1, 1, 1</span>
+          </div>
+          <div class="eigenvectors-section">
+            <div class="evec-label">Eigenvectors:</div>
+            <div class="evec-row" id="evec-1">v1: (1, 0, 0)</div>
+            <div class="evec-row" id="evec-2">v2: (0, 1, 0)</div>
+            <div class="evec-row" id="evec-3">v3: (0, 0, 1)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EIGENVALUES MODULE: Iteration controls -->
+      <section class="iteration-section" data-module="eigenvalues">
+        <div class="iteration-header">
+          <span class="iteration-label">Power Iteration</span>
+          <span class="iteration-count" id="iteration-count">0</span>
+        </div>
+        <div class="iteration-controls">
+          <button id="iter-reset" class="iter-btn" title="Reset">Reset</button>
+          <button id="iter-step" class="iter-btn iter-step" title="Apply A">Ax</button>
+        </div>
+        <p class="iteration-hint">Eigenvectors scale by λ each step</p>
+      </section>
+
+      <!-- EIGENVALUES MODULE: Display toggles -->
+      <section class="display-section" data-module="eigenvalues">
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-eigenspace" checked>
+          <span>Eigenvectors</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-pointcloud" checked>
+          <span>Point Cloud</span>
+        </label>
+      </section>
+
+      <!-- DEGENERATE MATRICES MODULE: Reset button -->
+      <section class="reset-section" data-module="degenerate-matrices">
+        <button id="reset-degen-btn" class="reset-btn-full">Reset to Identity</button>
+      </section>
+
+      <!-- DEGENERATE MATRICES MODULE: Rank info -->
+      <section class="degen-info-section" data-module="degenerate-matrices">
+        <div class="invariants-panel-large">
+          <div class="invariant-row-large">
+            <span class="invariant-label-large">Rank</span>
+            <span class="invariant-value-large" id="degen-rank-value">3</span>
+          </div>
+          <div class="invariant-row-large">
+            <span class="invariant-label-large">Nullity</span>
+            <span class="invariant-value-large" id="degen-nullity-value">0</span>
+          </div>
+          <div class="invariant-row-large rank-nullity-highlight">
+            <span class="invariant-label-large">Rank+Rullity</span>
+            <span class="invariant-value-large">3</span>
+          </div>
+        </div>
+        <div class="null-space-section">
+          <div class="evec-label">Null Space Basis:</div>
+          <div class="evec-row" id="null-basis-1">-</div>
+          <div class="evec-row" id="null-basis-2">-</div>
+          <div class="evec-row" id="null-basis-3">-</div>
+        </div>
+      </section>
+
+      <!-- DEGENERATE MATRICES MODULE: Display toggles -->
+      <section class="display-section" data-module="degenerate-matrices">
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-null-space" checked>
+          <span>Null Space</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-column-space" checked>
+          <span>Column Space</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-degen-pointcloud" checked>
+          <span>Point Cloud</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-degen-basis" checked>
+          <span>Basis</span>
+        </label>
+      </section>
+    </aside>
+
+    <main class="viewport">
+      <div class="module-dropdown" id="module-dropdown">
+        <button class="dropdown-toggle" id="dropdown-toggle">
+          <span id="current-module-label">Matrices</span>
+          <span class="dropdown-arrow">▼</span>
+        </button>
+        <div class="dropdown-menu" id="dropdown-menu">
+          <button class="dropdown-item active" data-module="matrices-as-maps">Matrices</button>
+          <button class="dropdown-item" data-module="eigenvalues">Eigenvalues</button>
+          <button class="dropdown-item" data-module="degenerate-matrices">Degenerate Matrix</button>
+        </div>
+      </div>
+      <canvas id="gl-canvas"></canvas>
+      <div class="axis-labels">
+        <span class="axis-label axis-x" id="label-x">X</span>
+        <span class="axis-label axis-y" id="label-y">Y</span>
+        <span class="axis-label axis-z" id="label-z">Z</span>
+      </div>
+      <div class="viewport-info">
+        <span>Drag to orbit • Scroll to zoom</span>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
