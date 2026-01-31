@@ -68,6 +68,32 @@ export interface AppState {
   showColumnSpace: boolean;
   showDegenPointCloud: boolean;
 
+  // Affine combinations module
+  affinePoints: [Vector3, Vector3, Vector3];
+  affineWeights: [number, number, number];
+  affineFrozen: [boolean, boolean, boolean];
+  showAffineHull: boolean;
+  showAffineResult: boolean;
+  showAffinePoints: boolean;
+  affineDimension: number;
+
+  // Convex combinations module
+  convexPoints: [Vector3, Vector3, Vector3];
+  convexWeights: [number, number, number];
+  convexFrozen: [boolean, boolean, boolean];
+  showConvexHull: boolean;
+  showConvexResult: boolean;
+  showConvexPoints: boolean;
+
+  // Complex eigenvalues module
+  rotationAngle: number;
+  scaleFactor: number;
+  rotationAxisType: string;
+  showRotationAxis: boolean;
+  showRotationPlane: boolean;
+  showComplexPlane: boolean;
+  showSpiralTrails: boolean;
+
   // Vectors (supports multiple named vectors)
   vectors: Map<string, Vector3>;
   customVector: Vector3;
@@ -138,6 +164,32 @@ export function createInitialState(): AppState {
     showNullSpace: false,
     showColumnSpace: false,
     showDegenPointCloud: false,
+
+    // Affine combinations module
+    affinePoints: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    affineWeights: [0.33, 0.33, 0.34],
+    affineFrozen: [false, false, false],
+    showAffineHull: true,
+    showAffineResult: true,
+    showAffinePoints: true,
+    affineDimension: 3,
+
+    // Convex combinations module
+    convexPoints: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    convexWeights: [0.33, 0.33, 0.34],
+    convexFrozen: [false, false, false],
+    showConvexHull: true,
+    showConvexResult: true,
+    showConvexPoints: true,
+
+    // Complex eigenvalues module
+    rotationAngle: 45,
+    scaleFactor: 1,
+    rotationAxisType: 'Z',
+    showRotationAxis: false,
+    showRotationPlane: false,
+    showComplexPlane: false,
+    showSpiralTrails: false,
 
     // Vectors
     vectors: new Map([['input', [1, 0.5, 0.5]]]),

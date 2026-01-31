@@ -19,6 +19,29 @@ interface AppState {
   showNullSpace: boolean;
   showColumnSpace: boolean;
   showDegenPointCloud: boolean;
+  // Affine combinations module (3 points)
+  affinePoints: [[number, number, number], [number, number, number], [number, number, number]];
+  affineWeights: [number, number, number];
+  affineFrozen: [boolean, boolean, boolean];
+  showAffineHull: boolean;
+  showAffineResult: boolean;
+  showAffinePoints: boolean;
+  affineDimension: number;
+  // Convex combinations module (3 points)
+  convexPoints: [[number, number, number], [number, number, number], [number, number, number]];
+  convexWeights: [number, number, number];
+  convexFrozen: [boolean, boolean, boolean];
+  showConvexHull: boolean;
+  showConvexResult: boolean;
+  showConvexPoints: boolean;
+  // Complex eigenvalues module
+  rotationAngle: number;
+  scaleFactor: number;
+  rotationAxisType: string;
+  showRotationAxis: boolean;
+  showRotationPlane: boolean;
+  showComplexPlane: boolean;
+  showSpiralTrails: boolean;
 }
 
 // Optional callback for when matrix changes
@@ -129,6 +152,15 @@ export function setupControls(state: AppState, applyPreset: (preset: string) => 
 
   // Degenerate matrix controls
   setupDegenerateControls(state, applyPreset);
+
+  // Affine combinations controls
+  setupAffineControls(state);
+
+  // Convex combinations controls
+  setupConvexControls(state);
+
+  // Complex eigenvalues controls
+  setupComplexEigenControls(state);
 }
 
 function setupIterationControls(state: AppState) {
@@ -254,5 +286,465 @@ export function updateDeterminant(matrix: Float32Array) {
   if (detElement) {
     detElement.textContent = `D: ${det.toFixed(3)}`;
     detElement.style.color = det < 0 ? '#f87171' : det === 0 ? '#fbbf24' : '#4ade80';
+  }
+}
+
+// Affine combinations module controls
+function setupAffineControls(state: AppState) {
+  // Point inputs (P1, P2, P3)
+  for (let i = 0; i < 3; i++) {
+    const pIdx = i + 1;
+    const xInput = document.getElementById(`p${pIdx}-x`) as HTMLInputElement;
+    const yInput = document.getElementById(`p${pIdx}-y`) as HTMLInputElement;
+    const zInput = document.getElementById(`p${pIdx}-z`) as HTMLInputElement;
+
+    const updatePoint = () => {
+      state.affinePoints[i] = [
+        parseFloat(xInput?.value) || 0,
+        parseFloat(yInput?.value) || 0,
+        parseFloat(zInput?.value) || 0,
+      ];
+      updateAffineDisplay(state);
+    };
+
+    xInput?.addEventListener('input', updatePoint);
+    yInput?.addEventListener('input', updatePoint);
+    zInput?.addEventListener('input', updatePoint);
+  }
+
+  // Weight inputs (w1, w2, w3) with freeze support
+  const affineWeightInputs = [
+    document.getElementById('weight-1') as HTMLInputElement,
+    document.getElementById('weight-2') as HTMLInputElement,
+    document.getElementById('weight-3') as HTMLInputElement,
+  ];
+  const affineFreezeInputs = [
+    document.getElementById('affine-freeze-1') as HTMLInputElement,
+    document.getElementById('affine-freeze-2') as HTMLInputElement,
+    document.getElementById('affine-freeze-3') as HTMLInputElement,
+  ];
+
+  // Handle freeze checkbox changes
+  for (let i = 0; i < 3; i++) {
+    affineFreezeInputs[i]?.addEventListener('change', () => {
+      state.affineFrozen[i] = affineFreezeInputs[i].checked;
+    });
+  }
+
+  // When one weight changes, adjust non-frozen weights proportionally
+  const updateAffineWeight = (changedIndex: number) => {
+    if (state.affineFrozen[changedIndex]) return; // Can't change frozen weight
+
+    const input = affineWeightInputs[changedIndex];
+    const newVal = parseFloat(input?.value) || 0;
+
+    // Find non-frozen other indices
+    const otherIndices = [0, 1, 2].filter(i => i !== changedIndex && !state.affineFrozen[i]);
+
+    // If no other weights can adjust (2 frozen), this weight is also locked
+    if (otherIndices.length === 0) {
+      input.value = state.affineWeights[changedIndex].toFixed(2);
+      return;
+    }
+
+    const frozenSum = [0, 1, 2]
+      .filter(i => i !== changedIndex && state.affineFrozen[i])
+      .reduce((sum, i) => sum + state.affineWeights[i], 0);
+
+    state.affineWeights[changedIndex] = newVal;
+    const remaining = 1 - newVal - frozenSum;
+
+    const otherSum = otherIndices.reduce((sum, i) => sum + state.affineWeights[i], 0);
+    if (otherSum > 0) {
+      const scale = remaining / otherSum;
+      for (const i of otherIndices) {
+        state.affineWeights[i] = state.affineWeights[i] * scale;
+      }
+    } else {
+      const share = remaining / otherIndices.length;
+      for (const i of otherIndices) {
+        state.affineWeights[i] = share;
+      }
+    }
+
+    // Update all input displays
+    for (let i = 0; i < 3; i++) {
+      if (affineWeightInputs[i]) affineWeightInputs[i].value = state.affineWeights[i].toFixed(2);
+    }
+    updateAffineDisplay(state);
+  };
+
+  for (let i = 0; i < 3; i++) {
+    affineWeightInputs[i]?.addEventListener('input', () => updateAffineWeight(i));
+  }
+
+  // Display toggles
+  const showHull = document.getElementById('show-affine-hull') as HTMLInputElement;
+  showHull?.addEventListener('change', () => {
+    state.showAffineHull = showHull.checked;
+  });
+
+  const showResult = document.getElementById('show-affine-result') as HTMLInputElement;
+  showResult?.addEventListener('change', () => {
+    state.showAffineResult = showResult.checked;
+  });
+
+  const showPoints = document.getElementById('show-affine-points') as HTMLInputElement;
+  showPoints?.addEventListener('change', () => {
+    state.showAffinePoints = showPoints.checked;
+  });
+
+  // Reset button
+  const resetBtn = document.getElementById('reset-affine-btn');
+  resetBtn?.addEventListener('click', () => {
+    state.affinePoints = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    state.affineWeights = [0.33, 0.33, 0.34];
+    state.affineFrozen = [false, false, false];
+    setAffineInputs(state);
+    updateAffineDisplay(state);
+  });
+
+  // Initialize display
+  updateAffineDisplay(state);
+}
+
+function setAffineInputs(state: AppState) {
+  // Set point inputs (3 points)
+  for (let i = 0; i < 3; i++) {
+    const pIdx = i + 1;
+    const xInput = document.getElementById(`p${pIdx}-x`) as HTMLInputElement;
+    const yInput = document.getElementById(`p${pIdx}-y`) as HTMLInputElement;
+    const zInput = document.getElementById(`p${pIdx}-z`) as HTMLInputElement;
+    if (xInput) xInput.value = state.affinePoints[i][0].toString();
+    if (yInput) yInput.value = state.affinePoints[i][1].toString();
+    if (zInput) zInput.value = state.affinePoints[i][2].toString();
+  }
+
+  // Set weight inputs (3 weights) and freeze checkboxes
+  for (let i = 0; i < 3; i++) {
+    const input = document.getElementById(`weight-${i + 1}`) as HTMLInputElement;
+    const freezeInput = document.getElementById(`affine-freeze-${i + 1}`) as HTMLInputElement;
+    if (input) input.value = state.affineWeights[i].toFixed(2);
+    if (freezeInput) freezeInput.checked = state.affineFrozen[i];
+  }
+}
+
+export function updateAffineDisplay(state: AppState) {
+  // All weights are now stored in state
+  const weights = state.affineWeights;
+
+  // Compute affine dimension (rank of vectors from P1 to other points)
+  const [p1, p2, p3] = state.affinePoints;
+  const v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+  const v2 = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
+
+  // Simple rank computation using cross product
+  const eps = 1e-6;
+  const len1 = Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1] + v1[2] * v1[2]);
+  const len2 = Math.sqrt(v2[0] * v2[0] + v2[1] * v2[1] + v2[2] * v2[2]);
+
+  let dimension = 0;
+  if (len1 > eps || len2 > eps) {
+    dimension = 1;
+    // Check if v2 is linearly independent of v1
+    const cross12 = [
+      v1[1] * v2[2] - v1[2] * v2[1],
+      v1[2] * v2[0] - v1[0] * v2[2],
+      v1[0] * v2[1] - v1[1] * v2[0],
+    ];
+    const crossLen12 = Math.sqrt(cross12[0] * cross12[0] + cross12[1] * cross12[1] + cross12[2] * cross12[2]);
+    if (crossLen12 > eps) {
+      dimension = 2;
+    }
+  }
+
+  state.affineDimension = dimension;
+  const dimEl = document.getElementById('affine-dim-value');
+  if (dimEl) dimEl.textContent = dimension.toString();
+
+  // Compute result point R = w1*P1 + w2*P2 + w3*P3
+  const result = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    result[0] += weights[i] * state.affinePoints[i][0];
+    result[1] += weights[i] * state.affinePoints[i][1];
+    result[2] += weights[i] * state.affinePoints[i][2];
+  }
+
+  const resultEl = document.getElementById('affine-result-value');
+  if (resultEl) {
+    resultEl.textContent = `(${result[0].toFixed(2)}, ${result[1].toFixed(2)}, ${result[2].toFixed(2)})`;
+  }
+}
+
+// Convex combinations module controls
+function setupConvexControls(state: AppState) {
+  // Point inputs (P1, P2, P3)
+  for (let i = 0; i < 3; i++) {
+    const pIdx = i + 1;
+    const xInput = document.getElementById(`convex-p${pIdx}-x`) as HTMLInputElement;
+    const yInput = document.getElementById(`convex-p${pIdx}-y`) as HTMLInputElement;
+    const zInput = document.getElementById(`convex-p${pIdx}-z`) as HTMLInputElement;
+
+    const updatePoint = () => {
+      state.convexPoints[i] = [
+        parseFloat(xInput?.value) || 0,
+        parseFloat(yInput?.value) || 0,
+        parseFloat(zInput?.value) || 0,
+      ];
+      updateConvexDisplay(state);
+    };
+
+    xInput?.addEventListener('input', updatePoint);
+    yInput?.addEventListener('input', updatePoint);
+    zInput?.addEventListener('input', updatePoint);
+  }
+
+  // Weight inputs (w1, w2, w3) with freeze support - enforce convex constraint: all weights >= 0, sum = 1
+  const convexWeightInputs = [
+    document.getElementById('convex-weight-1') as HTMLInputElement,
+    document.getElementById('convex-weight-2') as HTMLInputElement,
+    document.getElementById('convex-weight-3') as HTMLInputElement,
+  ];
+  const convexFreezeInputs = [
+    document.getElementById('convex-freeze-1') as HTMLInputElement,
+    document.getElementById('convex-freeze-2') as HTMLInputElement,
+    document.getElementById('convex-freeze-3') as HTMLInputElement,
+  ];
+
+  // Handle freeze checkbox changes
+  for (let i = 0; i < 3; i++) {
+    convexFreezeInputs[i]?.addEventListener('change', () => {
+      state.convexFrozen[i] = convexFreezeInputs[i].checked;
+    });
+  }
+
+  // When one weight changes, adjust non-frozen weights proportionally
+  const updateConvexWeight = (changedIndex: number) => {
+    if (state.convexFrozen[changedIndex]) return; // Can't change frozen weight
+
+    const input = convexWeightInputs[changedIndex];
+    let newVal = parseFloat(input?.value) || 0;
+
+    // Find non-frozen other indices
+    const otherIndices = [0, 1, 2].filter(i => i !== changedIndex && !state.convexFrozen[i]);
+
+    // If no other weights can adjust (2 frozen), this weight is also locked
+    if (otherIndices.length === 0) {
+      input.value = state.convexWeights[changedIndex].toFixed(2);
+      return;
+    }
+
+    const frozenSum = [0, 1, 2]
+      .filter(i => i !== changedIndex && state.convexFrozen[i])
+      .reduce((sum, i) => sum + state.convexWeights[i], 0);
+
+    // For convex: clamp so remaining weights stay >= 0
+    // Max value = 1 - frozenSum (leaves 0 for others)
+    const maxVal = 1 - frozenSum;
+    newVal = Math.max(0, Math.min(maxVal, newVal));
+
+    state.convexWeights[changedIndex] = newVal;
+    const remaining = 1 - newVal - frozenSum;
+
+    const otherSum = otherIndices.reduce((sum, i) => sum + state.convexWeights[i], 0);
+    if (otherSum > 0) {
+      const scale = remaining / otherSum;
+      for (const i of otherIndices) {
+        state.convexWeights[i] = state.convexWeights[i] * scale;
+      }
+    } else {
+      const share = remaining / otherIndices.length;
+      for (const i of otherIndices) {
+        state.convexWeights[i] = share;
+      }
+    }
+
+    // Update all input displays
+    for (let i = 0; i < 3; i++) {
+      if (convexWeightInputs[i]) convexWeightInputs[i].value = state.convexWeights[i].toFixed(2);
+    }
+
+    updateConvexDisplay(state);
+  };
+
+  for (let i = 0; i < 3; i++) {
+    convexWeightInputs[i]?.addEventListener('input', () => updateConvexWeight(i));
+  }
+
+  // Display toggles
+  const showHull = document.getElementById('show-convex-hull') as HTMLInputElement;
+  showHull?.addEventListener('change', () => {
+    state.showConvexHull = showHull.checked;
+  });
+
+  const showResult = document.getElementById('show-convex-result') as HTMLInputElement;
+  showResult?.addEventListener('change', () => {
+    state.showConvexResult = showResult.checked;
+  });
+
+  const showPoints = document.getElementById('show-convex-points') as HTMLInputElement;
+  showPoints?.addEventListener('change', () => {
+    state.showConvexPoints = showPoints.checked;
+  });
+
+  // Reset button
+  const resetBtn = document.getElementById('reset-convex-btn');
+  resetBtn?.addEventListener('click', () => {
+    state.convexPoints = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    state.convexWeights = [0.33, 0.33, 0.34];
+    state.convexFrozen = [false, false, false];
+    setConvexInputs(state);
+    updateConvexDisplay(state);
+  });
+
+  // Initialize display
+  updateConvexDisplay(state);
+}
+
+function setConvexInputs(state: AppState) {
+  // Set point inputs (3 points)
+  for (let i = 0; i < 3; i++) {
+    const pIdx = i + 1;
+    const xInput = document.getElementById(`convex-p${pIdx}-x`) as HTMLInputElement;
+    const yInput = document.getElementById(`convex-p${pIdx}-y`) as HTMLInputElement;
+    const zInput = document.getElementById(`convex-p${pIdx}-z`) as HTMLInputElement;
+    if (xInput) xInput.value = state.convexPoints[i][0].toString();
+    if (yInput) yInput.value = state.convexPoints[i][1].toString();
+    if (zInput) zInput.value = state.convexPoints[i][2].toString();
+  }
+
+  // Set weight inputs (3 weights) and freeze checkboxes
+  for (let i = 0; i < 3; i++) {
+    const input = document.getElementById(`convex-weight-${i + 1}`) as HTMLInputElement;
+    const freezeInput = document.getElementById(`convex-freeze-${i + 1}`) as HTMLInputElement;
+    if (input) input.value = state.convexWeights[i].toFixed(2);
+    if (freezeInput) freezeInput.checked = state.convexFrozen[i];
+  }
+}
+
+export function updateConvexDisplay(state: AppState) {
+  // All weights are now stored in state (sum = 1, all >= 0)
+  const weights = state.convexWeights;
+  const result = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    result[0] += weights[i] * state.convexPoints[i][0];
+    result[1] += weights[i] * state.convexPoints[i][1];
+    result[2] += weights[i] * state.convexPoints[i][2];
+  }
+
+  const resultEl = document.getElementById('convex-result-value');
+  if (resultEl) {
+    resultEl.textContent = `(${result[0].toFixed(2)}, ${result[1].toFixed(2)}, ${result[2].toFixed(2)})`;
+  }
+}
+
+// Complex eigenvalues module controls
+function setupComplexEigenControls(state: AppState) {
+  // Rotation axis presets
+  const axisButtons = document.querySelectorAll<HTMLButtonElement>('.complex-axis-btn');
+  axisButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Remove active class from all
+      axisButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.rotationAxisType = btn.dataset.axis || 'Z';
+      updateComplexEigenDisplay(state);
+    });
+  });
+
+  // Rotation angle slider
+  const angleSlider = document.getElementById('rotation-angle-slider') as HTMLInputElement;
+  const angleValue = document.getElementById('rotation-angle-value');
+  angleSlider?.addEventListener('input', () => {
+    state.rotationAngle = parseFloat(angleSlider.value);
+    if (angleValue) angleValue.textContent = `${state.rotationAngle}°`;
+    updateComplexEigenDisplay(state);
+  });
+
+  // Scale factor slider
+  const scaleSlider = document.getElementById('scale-factor-slider') as HTMLInputElement;
+  const scaleValue = document.getElementById('scale-factor-value');
+  scaleSlider?.addEventListener('input', () => {
+    state.scaleFactor = parseFloat(scaleSlider.value);
+    if (scaleValue) scaleValue.textContent = state.scaleFactor.toFixed(2);
+    updateComplexEigenDisplay(state);
+  });
+
+  // Display toggles
+  const showRotationAxis = document.getElementById('show-rotation-axis') as HTMLInputElement;
+  showRotationAxis?.addEventListener('change', () => {
+    state.showRotationAxis = showRotationAxis.checked;
+  });
+
+  const showRotationPlane = document.getElementById('show-rotation-plane') as HTMLInputElement;
+  showRotationPlane?.addEventListener('change', () => {
+    state.showRotationPlane = showRotationPlane.checked;
+  });
+
+  const showComplexPlane = document.getElementById('show-complex-plane') as HTMLInputElement;
+  showComplexPlane?.addEventListener('change', () => {
+    state.showComplexPlane = showComplexPlane.checked;
+  });
+
+  const showSpiralTrails = document.getElementById('show-spiral-trails') as HTMLInputElement;
+  showSpiralTrails?.addEventListener('change', () => {
+    state.showSpiralTrails = showSpiralTrails.checked;
+  });
+
+  // Reset button
+  const resetBtn = document.getElementById('reset-complex-btn');
+  resetBtn?.addEventListener('click', () => {
+    state.rotationAngle = 45;
+    state.scaleFactor = 1;
+    state.rotationAxisType = 'Z';
+    state.showRotationAxis = true;
+    state.showRotationPlane = true;
+    state.showComplexPlane = false;
+    state.showSpiralTrails = false;
+
+    // Update UI
+    if (angleSlider) angleSlider.value = '45';
+    if (angleValue) angleValue.textContent = '45°';
+    if (scaleSlider) scaleSlider.value = '1';
+    if (scaleValue) scaleValue.textContent = '1.00';
+    if (showRotationAxis) showRotationAxis.checked = true;
+    if (showRotationPlane) showRotationPlane.checked = true;
+    if (showComplexPlane) showComplexPlane.checked = false;
+    if (showSpiralTrails) showSpiralTrails.checked = false;
+
+    // Update axis button
+    axisButtons.forEach(b => b.classList.remove('active'));
+    const zBtn = document.querySelector('.complex-axis-btn[data-axis="Z"]');
+    zBtn?.classList.add('active');
+
+    updateComplexEigenDisplay(state);
+  });
+
+  // Initialize display
+  updateComplexEigenDisplay(state);
+}
+
+export function updateComplexEigenDisplay(state: AppState) {
+  const theta = state.rotationAngle;
+  const r = state.scaleFactor;
+
+  // Update eigenvalue display
+  const lambda1El = document.getElementById('complex-lambda1');
+  const lambda23El = document.getElementById('complex-lambda23');
+
+  if (lambda1El) {
+    if (r === 1) {
+      lambda1El.textContent = '1';
+    } else {
+      lambda1El.textContent = r.toFixed(2);
+    }
+  }
+
+  if (lambda23El) {
+    if (r === 1) {
+      lambda23El.textContent = `e^(±i${theta}°)`;
+    } else {
+      lambda23El.textContent = `${r.toFixed(2)}·e^(±i${theta}°)`;
+    }
   }
 }

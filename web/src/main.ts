@@ -61,6 +61,30 @@ interface AppState {
   showNullSpace: boolean;
   showColumnSpace: boolean;
   showDegenPointCloud: boolean;
+  // Affine combinations module
+  affinePoints: [[number, number, number], [number, number, number], [number, number, number]];
+  affineWeights: [number, number, number];
+  affineFrozen: [boolean, boolean, boolean];
+  showAffineHull: boolean;
+  showAffineResult: boolean;
+  showAffinePoints: boolean;
+  affineDimension: number;
+  // Convex combinations module
+  convexPoints: [[number, number, number], [number, number, number], [number, number, number]];
+  convexWeights: [number, number, number];
+  convexFrozen: [boolean, boolean, boolean];
+  showConvexHull: boolean;
+  showConvexResult: boolean;
+  showConvexPoints: boolean;
+  // Complex eigenvalues module
+  rotationAngle: number;
+  scaleFactor: number;
+  rotationAxisType: string;
+  showRotationAxis: boolean;
+  showRotationPlane: boolean;
+  showComplexPlane: boolean;
+  showSpiralTrails: boolean;
+  spiralTime: number; // Animation time for spirals
 }
 
 // Generate a cloud of starting points (on unit sphere) - must be before state init
@@ -125,6 +149,30 @@ const state: AppState = {
   showNullSpace: false,
   showColumnSpace: false,
   showDegenPointCloud: false,
+  // Affine combinations module
+  affinePoints: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  affineWeights: [0.33, 0.33, 0.34],
+  affineFrozen: [false, false, false],
+  showAffineHull: true,
+  showAffineResult: true,
+  showAffinePoints: true,
+  affineDimension: 3,
+  // Convex combinations module
+  convexPoints: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  convexWeights: [0.33, 0.33, 0.34],
+  convexFrozen: [false, false, false],
+  showConvexHull: true,
+  showConvexResult: true,
+  showConvexPoints: true,
+  // Complex eigenvalues module
+  rotationAngle: 45,
+  scaleFactor: 1,
+  rotationAxisType: 'Z',
+  showRotationAxis: true,
+  showRotationPlane: true,
+  showComplexPlane: false,
+  showSpiralTrails: false,
+  spiralTime: 0,
 };
 
 async function main() {
@@ -415,6 +463,72 @@ function updateModuleUI() {
     state.showDegenPointCloud = true;
     // Update degenerate matrix display
     updateDegenerateInvariants(state.targetMatrix);
+  } else if (state.currentModule === 'affine-combinations') {
+    state.showEigenspace = false;
+    state.showPointCloud = false;
+    state.showDegenPointCloud = false;
+    state.showVector = false;
+    state.showSphere = false;
+    state.showBasis = false;
+    state.showNullSpace = false;
+    state.showColumnSpace = false;
+    state.showAffineHull = true;
+    state.showAffineResult = true;
+    state.showAffinePoints = true;
+  } else if (state.currentModule === 'convex-combinations') {
+    state.showEigenspace = false;
+    state.showPointCloud = false;
+    state.showDegenPointCloud = false;
+    state.showVector = false;
+    state.showSphere = false;
+    state.showBasis = false;
+    state.showNullSpace = false;
+    state.showColumnSpace = false;
+    state.showAffineHull = false;
+    state.showAffineResult = false;
+    state.showAffinePoints = false;
+    state.showConvexHull = true;
+    state.showConvexResult = true;
+    state.showConvexPoints = true;
+  } else if (state.currentModule === 'complex-eigenvalues') {
+    state.showEigenspace = false;
+    state.showPointCloud = false;
+    state.showDegenPointCloud = false;
+    state.showVector = false;
+    state.showSphere = false;
+    state.showBasis = false;
+    state.showNullSpace = false;
+    state.showColumnSpace = false;
+    state.showAffineHull = false;
+    state.showAffineResult = false;
+    state.showAffinePoints = false;
+    state.showConvexHull = false;
+    state.showConvexResult = false;
+    state.showConvexPoints = false;
+    state.showRotationAxis = true;
+    state.showRotationPlane = true;
+    state.showGrid = true;
+  }
+
+  // Hide/show axis labels based on module
+  const axisLabels = document.querySelector('.axis-labels') as HTMLElement;
+  if (axisLabels) {
+    const hideAxisLabels = state.currentModule === 'affine-combinations' || state.currentModule === 'convex-combinations' || state.currentModule === 'complex-eigenvalues';
+    axisLabels.style.display = hideAxisLabels ? 'none' : '';
+  }
+
+  // Hide/show matrix section based on module
+  const matrixSection = document.querySelector('.matrix-section') as HTMLElement;
+  if (matrixSection) {
+    const hideMatrix = state.currentModule === 'affine-combinations' || state.currentModule === 'convex-combinations' || state.currentModule === 'complex-eigenvalues';
+    matrixSection.style.display = hideMatrix ? 'none' : '';
+  }
+
+  // Show/hide point labels for affine/convex module
+  const pointLabels = document.querySelector('.point-labels') as HTMLElement;
+  if (pointLabels) {
+    const isAffineOrConvex = state.currentModule === 'affine-combinations' || state.currentModule === 'convex-combinations';
+    pointLabels.style.display = isAffineOrConvex ? '' : 'none';
   }
 }
 
@@ -664,6 +778,441 @@ function applyMatrix(matrix: Float32Array, v: number[]): number[] {
   ];
 }
 
+// ==================== AFFINE COMBINATIONS RENDERING ====================
+
+// Draw the 4 source points for affine combinations
+function drawAffineSourcePoints(renderer: Renderer, points: [[number, number, number], [number, number, number], [number, number, number]]) {
+  const colors = [
+    [0.97, 0.44, 0.44],  // Red - P1
+    [0.29, 0.87, 0.50],  // Green - P2
+    [0.38, 0.65, 0.98],  // Blue - P3
+  ];
+
+  for (let i = 0; i < 3; i++) {
+    renderer.draw_points(
+      new Float32Array(points[i]),
+      new Float32Array(colors[i])
+    );
+  }
+}
+
+// Draw the affine hull based on dimension
+function drawAffineHull(renderer: Renderer, points: [[number, number, number], [number, number, number], [number, number, number]], dimension: number) {
+  const [p1, p2, p3] = points;
+  const hullColor = [0.2, 0.7, 0.65];
+  const alpha = 0.4;
+
+  if (dimension === 0) {
+    // Single point - already drawn by drawAffineSourcePoints
+    return;
+  } else if (dimension === 1) {
+    // Line - draw extended line through collinear points
+    // Find non-zero direction
+    let dir = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+    let len = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+    if (len < 1e-6) {
+      dir = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
+      len = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+    }
+    if (len > 1e-6) {
+      dir = [dir[0] / len, dir[1] / len, dir[2] / len];
+      const extend = 3.0;
+      const center = [(p1[0] + p2[0] + p3[0]) / 3, (p1[1] + p2[1] + p3[1]) / 3, (p1[2] + p2[2] + p3[2]) / 3];
+      const lineStart = [center[0] - dir[0] * extend, center[1] - dir[1] * extend, center[2] - dir[2] * extend];
+      const lineEnd = [center[0] + dir[0] * extend, center[1] + dir[1] * extend, center[2] + dir[2] * extend];
+      renderer.draw_lines(
+        new Float32Array([...lineStart, ...lineEnd]),
+        new Float32Array([hullColor[0] * alpha, hullColor[1] * alpha, hullColor[2] * alpha, hullColor[0] * alpha, hullColor[1] * alpha, hullColor[2] * alpha])
+      );
+    }
+  } else {
+    // Triangle (dim 2) - draw 3 edges
+    const edges: [number[], number[]][] = [[p1, p2], [p1, p3], [p2, p3]];
+    for (const [a, b] of edges) {
+      renderer.draw_lines(
+        new Float32Array([...a, ...b]),
+        new Float32Array([hullColor[0] * alpha, hullColor[1] * alpha, hullColor[2] * alpha, hullColor[0] * alpha, hullColor[1] * alpha, hullColor[2] * alpha])
+      );
+    }
+  }
+}
+
+// Draw the affine combination result point and connections
+function drawAffineResult(renderer: Renderer, points: [[number, number, number], [number, number, number], [number, number, number]], weights: [number, number, number]) {
+  // Compute R = w1*P1 + w2*P2 + w3*P3
+  const result: [number, number, number] = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    result[0] += weights[i] * points[i][0];
+    result[1] += weights[i] * points[i][1];
+    result[2] += weights[i] * points[i][2];
+  }
+
+  // Point colors
+  const colors = [
+    [0.97, 0.44, 0.44],  // Red - P1
+    [0.29, 0.87, 0.50],  // Green - P2
+    [0.38, 0.65, 0.98],  // Blue - P3
+  ];
+
+  // Draw connection lines from each point to result (with weight-based alpha)
+  for (let i = 0; i < 3; i++) {
+    const alpha = Math.min(1, Math.abs(weights[i]) * 0.8);
+    if (alpha > 0.05) {
+      const color = colors[i];
+      renderer.draw_lines(
+        new Float32Array([...points[i], ...result]),
+        new Float32Array([color[0] * alpha, color[1] * alpha, color[2] * alpha, 1.0, 1.0, 1.0])
+      );
+    }
+  }
+
+  // Draw result point (white)
+  renderer.draw_points(
+    new Float32Array(result),
+    new Float32Array([1.0, 1.0, 1.0])
+  );
+}
+
+// ==================== END AFFINE COMBINATIONS ====================
+
+// ==================== CONVEX COMBINATIONS ====================
+
+// Draw the convex hull (triangle) for 3 points
+function drawConvexHull(renderer: Renderer, points: [[number, number, number], [number, number, number], [number, number, number]]) {
+  const [p1, p2, p3] = points;
+  const hullColor = [0.5, 0.9, 0.5]; // Brighter green for convex hull
+  const alpha = 0.85;
+
+  // Draw triangle edges
+  const edges: [number[], number[]][] = [[p1, p2], [p1, p3], [p2, p3]];
+  for (const [a, b] of edges) {
+    renderer.draw_lines(
+      new Float32Array([...a, ...b]),
+      new Float32Array([hullColor[0] * alpha, hullColor[1] * alpha, hullColor[2] * alpha, hullColor[0] * alpha, hullColor[1] * alpha, hullColor[2] * alpha])
+    );
+  }
+
+  // Draw filled triangle using multiple line strips for shading effect
+  const steps = 12;
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    // Interpolate along edges and draw connecting lines
+    const p12 = [
+      p1[0] + t * (p2[0] - p1[0]),
+      p1[1] + t * (p2[1] - p1[1]),
+      p1[2] + t * (p2[2] - p1[2]),
+    ];
+    const p13 = [
+      p1[0] + t * (p3[0] - p1[0]),
+      p1[1] + t * (p3[1] - p1[1]),
+      p1[2] + t * (p3[2] - p1[2]),
+    ];
+    const fillAlpha = alpha * 0.45;
+    renderer.draw_lines(
+      new Float32Array([...p12, ...p13]),
+      new Float32Array([hullColor[0] * fillAlpha, hullColor[1] * fillAlpha, hullColor[2] * fillAlpha, hullColor[0] * fillAlpha, hullColor[1] * fillAlpha, hullColor[2] * fillAlpha])
+    );
+  }
+}
+
+// ==================== END CONVEX COMBINATIONS ====================
+
+// ==================== COMPLEX EIGENVALUES ====================
+
+// Get rotation axis vector based on type
+function getRotationAxis(axisType: string): [number, number, number] {
+  switch (axisType) {
+    case 'X': return [1, 0, 0];
+    case 'Y': return [0, 1, 0];
+    case 'Z': return [0, 0, 1];
+    default: return [0, 0, 1];
+  }
+}
+
+// Create rotation matrix around an axis (using Rodrigues formula)
+function createRotationMatrix(axis: [number, number, number], angleDeg: number, scale: number): Float32Array {
+  const theta = (angleDeg * Math.PI) / 180;
+  const c = Math.cos(theta) * scale;
+  const s = Math.sin(theta) * scale;
+  const [x, y, z] = axis;
+  const oneMinusC = (1 - Math.cos(theta)) * scale;
+
+  // Rodrigues rotation matrix (column-major)
+  return new Float32Array([
+    c + x * x * oneMinusC / scale,     x * y * oneMinusC / scale + z * s,  x * z * oneMinusC / scale - y * s,
+    x * y * oneMinusC / scale - z * s, c + y * y * oneMinusC / scale,      y * z * oneMinusC / scale + x * s,
+    x * z * oneMinusC / scale + y * s, y * z * oneMinusC / scale - x * s,  c + z * z * oneMinusC / scale,
+  ]);
+}
+
+// Draw the rotation axis as a bright line
+function drawRotationAxis(renderer: Renderer, axis: [number, number, number]) {
+  const len = 3.0;
+  const [ax, ay, az] = axis;
+
+  // Bright gold color for rotation axis
+  const axisColor = [1.0, 0.85, 0.3];
+
+  // Draw axis line through origin
+  const positions = new Float32Array([
+    -ax * len, -ay * len, -az * len,
+    ax * len, ay * len, az * len,
+  ]);
+  const colors = new Float32Array([
+    axisColor[0], axisColor[1], axisColor[2],
+    axisColor[0], axisColor[1], axisColor[2],
+  ]);
+  renderer.draw_lines(positions, colors);
+
+  // Draw endpoint markers
+  renderer.draw_points(
+    new Float32Array([ax * len, ay * len, az * len]),
+    new Float32Array(axisColor)
+  );
+  renderer.draw_points(
+    new Float32Array([-ax * len, -ay * len, -az * len]),
+    new Float32Array(axisColor)
+  );
+}
+
+// Draw the rotation plane as a disc/circle perpendicular to the axis
+function drawRotationPlane(renderer: Renderer, axis: [number, number, number], angleDeg: number) {
+  const [ax, ay, az] = axis;
+  const planeColor = [0.3, 0.6, 0.9];
+  const alpha = 0.4;
+
+  // Find two perpendicular vectors in the plane
+  let u: [number, number, number];
+  if (Math.abs(ax) < 0.9) {
+    u = [0, -az, ay]; // Cross with X axis
+  } else {
+    u = [az, 0, -ax]; // Cross with Y axis
+  }
+  const uLen = Math.sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
+  u = [u[0] / uLen, u[1] / uLen, u[2] / uLen];
+
+  // Second perpendicular vector (cross product of axis and u)
+  const v: [number, number, number] = [
+    ay * u[2] - az * u[1],
+    az * u[0] - ax * u[2],
+    ax * u[1] - ay * u[0],
+  ];
+
+  const radius = 1.5;
+  const segments = 32;
+
+  // Draw circle outline
+  for (let i = 0; i < segments; i++) {
+    const theta1 = (i / segments) * Math.PI * 2;
+    const theta2 = ((i + 1) / segments) * Math.PI * 2;
+
+    const p1 = [
+      radius * (Math.cos(theta1) * u[0] + Math.sin(theta1) * v[0]),
+      radius * (Math.cos(theta1) * u[1] + Math.sin(theta1) * v[1]),
+      radius * (Math.cos(theta1) * u[2] + Math.sin(theta1) * v[2]),
+    ];
+    const p2 = [
+      radius * (Math.cos(theta2) * u[0] + Math.sin(theta2) * v[0]),
+      radius * (Math.cos(theta2) * u[1] + Math.sin(theta2) * v[1]),
+      radius * (Math.cos(theta2) * u[2] + Math.sin(theta2) * v[2]),
+    ];
+
+    renderer.draw_lines(
+      new Float32Array([...p1, ...p2]),
+      new Float32Array([planeColor[0] * alpha, planeColor[1] * alpha, planeColor[2] * alpha, planeColor[0] * alpha, planeColor[1] * alpha, planeColor[2] * alpha])
+    );
+  }
+
+  // Draw angle arc from 0 to theta
+  const arcRadius = 0.5;
+  const arcSegments = Math.max(4, Math.floor(Math.abs(angleDeg) / 10));
+  const arcColor = [0.9, 0.5, 0.2];
+
+  // Draw reference vector (starting direction)
+  renderer.draw_lines(
+    new Float32Array([0, 0, 0, u[0] * arcRadius * 2, u[1] * arcRadius * 2, u[2] * arcRadius * 2]),
+    new Float32Array([arcColor[0] * 0.5, arcColor[1] * 0.5, arcColor[2] * 0.5, arcColor[0], arcColor[1], arcColor[2]])
+  );
+
+  // Draw arc showing rotation angle
+  const thetaRad = (angleDeg * Math.PI) / 180;
+  for (let i = 0; i < arcSegments; i++) {
+    const t1 = (i / arcSegments) * thetaRad;
+    const t2 = ((i + 1) / arcSegments) * thetaRad;
+
+    const p1 = [
+      arcRadius * (Math.cos(t1) * u[0] + Math.sin(t1) * v[0]),
+      arcRadius * (Math.cos(t1) * u[1] + Math.sin(t1) * v[1]),
+      arcRadius * (Math.cos(t1) * u[2] + Math.sin(t1) * v[2]),
+    ];
+    const p2 = [
+      arcRadius * (Math.cos(t2) * u[0] + Math.sin(t2) * v[0]),
+      arcRadius * (Math.cos(t2) * u[1] + Math.sin(t2) * v[1]),
+      arcRadius * (Math.cos(t2) * u[2] + Math.sin(t2) * v[2]),
+    ];
+
+    renderer.draw_lines(
+      new Float32Array([...p1, ...p2]),
+      new Float32Array([arcColor[0], arcColor[1], arcColor[2], arcColor[0], arcColor[1], arcColor[2]])
+    );
+  }
+
+  // Draw rotated vector endpoint
+  const rotatedEndX = arcRadius * 2 * (Math.cos(thetaRad) * u[0] + Math.sin(thetaRad) * v[0]);
+  const rotatedEndY = arcRadius * 2 * (Math.cos(thetaRad) * u[1] + Math.sin(thetaRad) * v[1]);
+  const rotatedEndZ = arcRadius * 2 * (Math.cos(thetaRad) * u[2] + Math.sin(thetaRad) * v[2]);
+  renderer.draw_lines(
+    new Float32Array([0, 0, 0, rotatedEndX, rotatedEndY, rotatedEndZ]),
+    new Float32Array([arcColor[0], arcColor[1], arcColor[2], arcColor[0], arcColor[1], arcColor[2]])
+  );
+  renderer.draw_points(
+    new Float32Array([rotatedEndX, rotatedEndY, rotatedEndZ]),
+    new Float32Array(arcColor)
+  );
+}
+
+// Draw spiral trajectories for vectors when |λ| ≠ 1
+function drawSpiralTrajectory(renderer: Renderer, axis: [number, number, number], angleDeg: number, scale: number, time: number) {
+  const [ax, ay, az] = axis;
+
+  // Find perpendicular vectors
+  let u: [number, number, number];
+  if (Math.abs(ax) < 0.9) {
+    u = [0, -az, ay];
+  } else {
+    u = [az, 0, -ax];
+  }
+  const uLen = Math.sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
+  u = [u[0] / uLen, u[1] / uLen, u[2] / uLen];
+
+  const v: [number, number, number] = [
+    ay * u[2] - az * u[1],
+    az * u[0] - ax * u[2],
+    ax * u[1] - ay * u[0],
+  ];
+
+  // Draw multiple spiral trajectories from different starting points
+  const startingPoints = [
+    [u[0], u[1], u[2]],
+    [v[0], v[1], v[2]],
+    [-u[0], -u[1], -u[2]],
+    [-v[0], -v[1], -v[2]],
+  ];
+
+  const spiralColors = [
+    [0.9, 0.4, 0.3],  // Red-orange
+    [0.3, 0.8, 0.5],  // Green
+    [0.4, 0.5, 0.9],  // Blue
+    [0.8, 0.6, 0.2],  // Orange
+  ];
+
+  const thetaStep = (angleDeg * Math.PI) / 180;
+  const iterations = 20;
+
+  for (let s = 0; s < startingPoints.length; s++) {
+    const startPt = startingPoints[s];
+    const color = spiralColors[s];
+
+    let currentRadius = 1;
+    let currentAngle = time * 0.02; // Animate based on time
+
+    for (let i = 0; i < iterations; i++) {
+      const t1 = currentAngle + i * thetaStep;
+      const t2 = currentAngle + (i + 1) * thetaStep;
+
+      const r1 = currentRadius * Math.pow(scale, i);
+      const r2 = currentRadius * Math.pow(scale, i + 1);
+
+      const p1 = [
+        r1 * (Math.cos(t1) * u[0] + Math.sin(t1) * v[0]),
+        r1 * (Math.cos(t1) * u[1] + Math.sin(t1) * v[1]),
+        r1 * (Math.cos(t1) * u[2] + Math.sin(t1) * v[2]),
+      ];
+      const p2 = [
+        r2 * (Math.cos(t2) * u[0] + Math.sin(t2) * v[0]),
+        r2 * (Math.cos(t2) * u[1] + Math.sin(t2) * v[1]),
+        r2 * (Math.cos(t2) * u[2] + Math.sin(t2) * v[2]),
+      ];
+
+      // Check bounds
+      if (r2 > 5 || r2 < 0.05) break;
+
+      const alpha = 0.3 + 0.5 * (1 - i / iterations);
+      renderer.draw_lines(
+        new Float32Array([...p1, ...p2]),
+        new Float32Array([color[0] * alpha, color[1] * alpha, color[2] * alpha, color[0] * alpha, color[1] * alpha, color[2] * alpha])
+      );
+    }
+
+    // Draw starting point
+    const sp = startPt;
+    renderer.draw_points(
+      new Float32Array([sp[0], sp[1], sp[2]]),
+      new Float32Array(color)
+    );
+  }
+}
+
+// Draw complex plane inset showing eigenvalues
+function drawComplexPlaneInset(renderer: Renderer, angleDeg: number, scale: number) {
+  // Draw in a corner of the 3D space (offset from origin)
+  const offset = [-2.5, 2.0, 0];
+  const planeSize = 1.5;
+
+  const bgColor = [0.15, 0.15, 0.2];
+  const circleColor = [0.3, 0.4, 0.5];
+  const eigenColor = [0.9, 0.5, 0.2];
+
+  // Draw unit circle
+  const circleSegments = 32;
+  for (let i = 0; i < circleSegments; i++) {
+    const t1 = (i / circleSegments) * Math.PI * 2;
+    const t2 = ((i + 1) / circleSegments) * Math.PI * 2;
+
+    const p1 = [offset[0] + Math.cos(t1) * scale, offset[1] + Math.sin(t1) * scale, offset[2]];
+    const p2 = [offset[0] + Math.cos(t2) * scale, offset[1] + Math.sin(t2) * scale, offset[2]];
+
+    renderer.draw_lines(
+      new Float32Array([...p1, ...p2]),
+      new Float32Array([circleColor[0], circleColor[1], circleColor[2], circleColor[0], circleColor[1], circleColor[2]])
+    );
+  }
+
+  // Draw axes
+  renderer.draw_lines(
+    new Float32Array([offset[0] - planeSize, offset[1], offset[2], offset[0] + planeSize, offset[1], offset[2]]),
+    new Float32Array([bgColor[0], bgColor[1], bgColor[2], bgColor[0], bgColor[1], bgColor[2]])
+  );
+  renderer.draw_lines(
+    new Float32Array([offset[0], offset[1] - planeSize, offset[2], offset[0], offset[1] + planeSize, offset[2]]),
+    new Float32Array([bgColor[0], bgColor[1], bgColor[2], bgColor[0], bgColor[1], bgColor[2]])
+  );
+
+  // Draw eigenvalues on the circle
+  const thetaRad = (angleDeg * Math.PI) / 180;
+  const lambda1 = [offset[0] + scale * Math.cos(thetaRad), offset[1] + scale * Math.sin(thetaRad), offset[2]];
+  const lambda2 = [offset[0] + scale * Math.cos(-thetaRad), offset[1] + scale * Math.sin(-thetaRad), offset[2]];
+
+  // Draw lines from origin to eigenvalues
+  renderer.draw_lines(
+    new Float32Array([offset[0], offset[1], offset[2], ...lambda1]),
+    new Float32Array([eigenColor[0] * 0.5, eigenColor[1] * 0.5, eigenColor[2] * 0.5, eigenColor[0], eigenColor[1], eigenColor[2]])
+  );
+  renderer.draw_lines(
+    new Float32Array([offset[0], offset[1], offset[2], ...lambda2]),
+    new Float32Array([eigenColor[0] * 0.5, eigenColor[1] * 0.5, eigenColor[2] * 0.5, eigenColor[0], eigenColor[1], eigenColor[2]])
+  );
+
+  // Draw eigenvalue points
+  renderer.draw_points(new Float32Array(lambda1), new Float32Array(eigenColor));
+  renderer.draw_points(new Float32Array(lambda2), new Float32Array(eigenColor));
+
+  // Draw real eigenvalue at (1, 0) for the rotation axis
+  const realEigen = [offset[0] + 1, offset[1], offset[2]];
+  renderer.draw_points(new Float32Array(realEigen), new Float32Array([0.3, 0.9, 0.5]));
+}
+
+// ==================== END COMPLEX EIGENVALUES ====================
 
 // Draw point cloud and their iterations
 function drawPointCloud(renderer: Renderer, matrix: Float32Array, points: number[][], iterations: number) {
@@ -860,6 +1409,13 @@ function render(time: number) {
   // Update axis labels positions (follow transformed basis vectors)
   updateAxisLabels(projMatrix, viewMatrix, state.canvas, interpMatrix);
 
+  // Update point labels for affine/convex module
+  if (state.currentModule === 'affine-combinations') {
+    updatePointLabels(projMatrix, viewMatrix, state.canvas, state.affinePoints);
+  } else if (state.currentModule === 'convex-combinations') {
+    updatePointLabels(projMatrix, viewMatrix, state.canvas, state.convexPoints);
+  }
+
   // Draw transformed elements using model matrix
   const modelMat4 = mat3_to_mat4(Array.from(interpMatrix));
   state.renderer.set_model(modelMat4);
@@ -964,6 +1520,72 @@ function render(time: number) {
     drawDegenPointCloud(state.renderer, state.targetMatrix, state.pointCloud);
   }
 
+  // Draw affine combinations (in world space)
+  if (state.currentModule === 'affine-combinations') {
+    state.renderer.set_model(identityMat4);
+
+    const weights: [number, number, number] = state.affineWeights;
+
+    if (state.showAffinePoints) {
+      drawAffineSourcePoints(state.renderer, state.affinePoints);
+    }
+
+    if (state.showAffineHull) {
+      drawAffineHull(state.renderer, state.affinePoints, state.affineDimension);
+    }
+
+    if (state.showAffineResult) {
+      drawAffineResult(state.renderer, state.affinePoints, weights);
+    }
+  }
+
+  // Draw convex combinations (in world space)
+  if (state.currentModule === 'convex-combinations') {
+    state.renderer.set_model(identityMat4);
+
+    const weights: [number, number, number] = state.convexWeights;
+
+    if (state.showConvexPoints) {
+      drawAffineSourcePoints(state.renderer, state.convexPoints);
+    }
+
+    if (state.showConvexHull) {
+      drawConvexHull(state.renderer, state.convexPoints);
+    }
+
+    if (state.showConvexResult) {
+      drawAffineResult(state.renderer, state.convexPoints, weights);
+    }
+  }
+
+  // Draw complex eigenvalues visualizations (in world space)
+  if (state.currentModule === 'complex-eigenvalues') {
+    state.renderer.set_model(identityMat4);
+
+    const axis = getRotationAxis(state.rotationAxisType);
+
+    // Update spiral animation time
+    if (state.showSpiralTrails) {
+      state.spiralTime += 1;
+    }
+
+    if (state.showRotationAxis) {
+      drawRotationAxis(state.renderer, axis);
+    }
+
+    if (state.showRotationPlane) {
+      drawRotationPlane(state.renderer, axis, state.rotationAngle);
+    }
+
+    if (state.showSpiralTrails) {
+      drawSpiralTrajectory(state.renderer, axis, state.rotationAngle, state.scaleFactor, state.spiralTime);
+    }
+
+    if (state.showComplexPlane) {
+      drawComplexPlaneInset(state.renderer, state.rotationAngle, state.scaleFactor);
+    }
+  }
+
   requestAnimationFrame(render);
 }
 
@@ -1043,6 +1665,27 @@ function project3DToScreen(
   const screenY = (1 - ndcY) * 0.5 * height;
 
   return { x: screenX, y: screenY };
+}
+
+// Update point labels for affine module
+function updatePointLabels(proj: number[], view: number[], canvas: HTMLCanvasElement, points: [[number, number, number], [number, number, number], [number, number, number]]) {
+  const rect = canvas.getBoundingClientRect();
+  const labelIds = ['label-p1', 'label-p2', 'label-p3'];
+
+  for (let i = 0; i < 3; i++) {
+    const label = document.getElementById(labelIds[i]);
+    if (!label) continue;
+
+    const pos = points[i];
+    const screen = project3DToScreen(pos, proj, view, rect.width, rect.height);
+    if (screen) {
+      label.style.left = `${screen.x + 10}px`;
+      label.style.top = `${screen.y - 10}px`;
+      label.style.display = 'block';
+    } else {
+      label.style.display = 'none';
+    }
+  }
 }
 
 // Expose state for controls

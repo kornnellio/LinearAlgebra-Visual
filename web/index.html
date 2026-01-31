@@ -170,18 +170,234 @@
           <span>Basis</span>
         </label>
       </section>
+
+      <!-- AFFINE COMBINATIONS MODULE: Reset button -->
+      <section class="reset-section" data-module="affine-combinations">
+        <button id="reset-affine-btn" class="reset-btn-full">Reset Points & Weights</button>
+      </section>
+
+      <!-- AFFINE COMBINATIONS MODULE: Point inputs -->
+      <section class="affine-points-section" data-module="affine-combinations">
+        <div class="affine-point-row">
+          <span class="point-label" style="color: #f87171;">P₁</span>
+          <input type="number" id="p1-x" step="0.1" value="1">
+          <input type="number" id="p1-y" step="0.1" value="0">
+          <input type="number" id="p1-z" step="0.1" value="0">
+        </div>
+        <div class="affine-point-row">
+          <span class="point-label" style="color: #4ade80;">P₂</span>
+          <input type="number" id="p2-x" step="0.1" value="0">
+          <input type="number" id="p2-y" step="0.1" value="1">
+          <input type="number" id="p2-z" step="0.1" value="0">
+        </div>
+        <div class="affine-point-row">
+          <span class="point-label" style="color: #60a5fa;">P₃</span>
+          <input type="number" id="p3-x" step="0.1" value="0">
+          <input type="number" id="p3-y" step="0.1" value="0">
+          <input type="number" id="p3-z" step="0.1" value="1">
+        </div>
+      </section>
+
+      <!-- AFFINE COMBINATIONS MODULE: Weight inputs -->
+      <section class="affine-weights-section" data-module="affine-combinations">
+        <div class="section-label">Weights (Σwᵢ = 1)</div>
+        <div class="affine-weight-row">
+          <input type="checkbox" id="affine-freeze-1" class="freeze-checkbox" title="Freeze w1">
+          <span class="weight-label" style="color: #f87171;">w₁</span>
+          <input type="number" id="weight-1" step="0.01" value="0.33">
+        </div>
+        <div class="affine-weight-row">
+          <input type="checkbox" id="affine-freeze-2" class="freeze-checkbox" title="Freeze w2">
+          <span class="weight-label" style="color: #4ade80;">w₂</span>
+          <input type="number" id="weight-2" step="0.01" value="0.33">
+        </div>
+        <div class="affine-weight-row">
+          <input type="checkbox" id="affine-freeze-3" class="freeze-checkbox" title="Freeze w3">
+          <span class="weight-label" style="color: #60a5fa;">w₃</span>
+          <input type="number" id="weight-3" step="0.01" value="0.34">
+        </div>
+      </section>
+
+      <!-- AFFINE COMBINATIONS MODULE: Result display -->
+      <section class="affine-result-section" data-module="affine-combinations">
+        <div class="invariants-panel-large">
+          <div class="invariant-row-large">
+            <span class="invariant-label-large">Affine Dim</span>
+            <span class="invariant-value-large" id="affine-dim-value">3</span>
+          </div>
+          <div class="invariant-row-large result-highlight">
+            <span class="invariant-label-large">R = Σwᵢpᵢ</span>
+            <span class="invariant-value-large" id="affine-result-value">(0.00, 0.00, 0.00)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- AFFINE COMBINATIONS MODULE: Display toggles -->
+      <section class="display-section" data-module="affine-combinations">
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-affine-hull" checked>
+          <span>Affine Hull</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-affine-result" checked>
+          <span>Result Point</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-affine-points" checked>
+          <span>Source Points</span>
+        </label>
+      </section>
+
+      <!-- CONVEX COMBINATIONS MODULE: Reset button -->
+      <section class="reset-section" data-module="convex-combinations">
+        <button id="reset-convex-btn" class="reset-btn-full">Reset Points & Weights</button>
+      </section>
+
+      <!-- CONVEX COMBINATIONS MODULE: Point inputs -->
+      <section class="convex-points-section" data-module="convex-combinations">
+        <div class="affine-point-row">
+          <span class="point-label" style="color: #f87171;">P₁</span>
+          <input type="number" id="convex-p1-x" step="0.1" value="1">
+          <input type="number" id="convex-p1-y" step="0.1" value="0">
+          <input type="number" id="convex-p1-z" step="0.1" value="0">
+        </div>
+        <div class="affine-point-row">
+          <span class="point-label" style="color: #4ade80;">P₂</span>
+          <input type="number" id="convex-p2-x" step="0.1" value="0">
+          <input type="number" id="convex-p2-y" step="0.1" value="1">
+          <input type="number" id="convex-p2-z" step="0.1" value="0">
+        </div>
+        <div class="affine-point-row">
+          <span class="point-label" style="color: #60a5fa;">P₃</span>
+          <input type="number" id="convex-p3-x" step="0.1" value="0">
+          <input type="number" id="convex-p3-y" step="0.1" value="0">
+          <input type="number" id="convex-p3-z" step="0.1" value="1">
+        </div>
+      </section>
+
+      <!-- CONVEX COMBINATIONS MODULE: Weight inputs (non-negative) -->
+      <section class="convex-weights-section" data-module="convex-combinations">
+        <div class="section-label">Weights (Σwᵢ = 1, wᵢ ≥ 0)</div>
+        <div class="affine-weight-row">
+          <input type="checkbox" id="convex-freeze-1" class="freeze-checkbox" title="Freeze w1">
+          <span class="weight-label" style="color: #f87171;">w₁</span>
+          <input type="number" id="convex-weight-1" step="0.01" min="0" max="1" value="0.33">
+        </div>
+        <div class="affine-weight-row">
+          <input type="checkbox" id="convex-freeze-2" class="freeze-checkbox" title="Freeze w2">
+          <span class="weight-label" style="color: #4ade80;">w₂</span>
+          <input type="number" id="convex-weight-2" step="0.01" min="0" max="1" value="0.33">
+        </div>
+        <div class="affine-weight-row">
+          <input type="checkbox" id="convex-freeze-3" class="freeze-checkbox" title="Freeze w3">
+          <span class="weight-label" style="color: #60a5fa;">w₃</span>
+          <input type="number" id="convex-weight-3" step="0.01" min="0" max="1" value="0.34">
+        </div>
+      </section>
+
+      <!-- CONVEX COMBINATIONS MODULE: Result display -->
+      <section class="convex-result-section" data-module="convex-combinations">
+        <div class="invariants-panel-large">
+          <div class="invariant-row-large result-highlight">
+            <span class="invariant-label-large">R = Σwᵢpᵢ</span>
+            <span class="invariant-value-large" id="convex-result-value">(0.33, 0.33, 0.34)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONVEX COMBINATIONS MODULE: Display toggles -->
+      <section class="display-section" data-module="convex-combinations">
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-convex-hull" checked>
+          <span>Convex Hull</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-convex-result" checked>
+          <span>Result Point</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-convex-points" checked>
+          <span>Source Points</span>
+        </label>
+      </section>
+
+      <!-- COMPLEX EIGENVALUES MODULE: Reset button -->
+      <section class="reset-section" data-module="complex-eigenvalues">
+        <button id="reset-complex-btn" class="reset-btn-full">Reset to Default</button>
+      </section>
+
+      <!-- COMPLEX EIGENVALUES MODULE: Rotation axis presets -->
+      <section class="presets-section" data-module="complex-eigenvalues">
+        <div class="section-label">Rotation Axis</div>
+        <div class="preset-grid">
+          <button class="preset-btn complex-axis-btn active" data-axis="X">X</button>
+          <button class="preset-btn complex-axis-btn" data-axis="Y">Y</button>
+          <button class="preset-btn complex-axis-btn" data-axis="Z">Z</button>
+        </div>
+      </section>
+
+      <!-- COMPLEX EIGENVALUES MODULE: Angle and scale sliders -->
+      <section class="complex-sliders-section" data-module="complex-eigenvalues">
+        <div class="slider-row">
+          <label for="rotation-angle-slider">θ (angle)</label>
+          <input type="range" id="rotation-angle-slider" min="0" max="360" value="45">
+          <span id="rotation-angle-value">45°</span>
+        </div>
+        <div class="slider-row" id="scale-slider-row">
+          <label for="scale-factor-slider">|λ| (scale)</label>
+          <input type="range" id="scale-factor-slider" min="0.5" max="1.5" step="0.01" value="1">
+          <span id="scale-factor-value">1.00</span>
+        </div>
+      </section>
+
+      <!-- COMPLEX EIGENVALUES MODULE: Eigenvalue display -->
+      <section class="complex-eigen-info-section" data-module="complex-eigenvalues">
+        <div class="invariants-panel-large">
+          <div class="invariant-row-large">
+            <span class="invariant-label-large">λ₁ (real)</span>
+            <span class="invariant-value-large" id="complex-lambda1">1</span>
+          </div>
+          <div class="invariant-row-large eigenvalues-highlight">
+            <span class="invariant-label-large">λ₂, λ₃</span>
+            <span class="invariant-value-large" id="complex-lambda23">e^(±i45°)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMPLEX EIGENVALUES MODULE: Display toggles -->
+      <section class="display-section" data-module="complex-eigenvalues">
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-rotation-axis" checked>
+          <span>Rotation Axis</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-rotation-plane" checked>
+          <span>Rotation Plane</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-complex-plane">
+          <span>Complex Plane</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="show-spiral-trails">
+          <span>Spiral Trails</span>
+        </label>
+      </section>
     </aside>
 
     <main class="viewport">
       <div class="module-dropdown" id="module-dropdown">
         <button class="dropdown-toggle" id="dropdown-toggle">
-          <span id="current-module-label">Matrices</span>
+          <span id="current-module-label">Linear Transformations</span>
           <span class="dropdown-arrow">▼</span>
         </button>
         <div class="dropdown-menu" id="dropdown-menu">
-          <button class="dropdown-item active" data-module="matrices-as-maps">Matrices</button>
+          <button class="dropdown-item active" data-module="matrices-as-maps">Linear Transformations</button>
           <button class="dropdown-item" data-module="eigenvalues">Eigenvalues</button>
           <button class="dropdown-item" data-module="degenerate-matrices">Degenerate Matrix</button>
+          <button class="dropdown-item" data-module="affine-combinations">Affine Combinations</button>
+          <button class="dropdown-item" data-module="convex-combinations">Convex Combinations</button>
+          <button class="dropdown-item" data-module="complex-eigenvalues">Complex Eigenvalues</button>
         </div>
       </div>
       <canvas id="gl-canvas"></canvas>
@@ -189,6 +405,11 @@
         <span class="axis-label axis-x" id="label-x">X</span>
         <span class="axis-label axis-y" id="label-y">Y</span>
         <span class="axis-label axis-z" id="label-z">Z</span>
+      </div>
+      <div class="point-labels">
+        <span class="point-label-3d" id="label-p1" style="color: #f87171;">P₁</span>
+        <span class="point-label-3d" id="label-p2" style="color: #4ade80;">P₂</span>
+        <span class="point-label-3d" id="label-p3" style="color: #60a5fa;">P₃</span>
       </div>
       <div class="viewport-info">
         <span>Drag to orbit • Scroll to zoom</span>

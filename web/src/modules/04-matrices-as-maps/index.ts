@@ -116,7 +116,7 @@ const compositionScene = createScene(
 // Module 04: Matrices as Linear Maps
 export const module04: Module = {
   id: 'matrices-as-maps',
-  title: 'Matrices as Linear Maps',
+  title: 'Linear Transformations',
   description: 'Understand how matrices represent linear transformations. See the column picture, explore transformation types, and visualize composition.',
   prerequisites: [], // No prerequisites - entry point module
   scenes: [columnPictureScene, transformationGalleryScene, compositionScene],
